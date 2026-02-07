@@ -92,4 +92,60 @@ class SessionManager
         self::start();
         return $_SESSION[$key] ?? $default;
     }
+
+    /**
+     * Elimina un valor de la sesión
+     */
+    public static function forget($key)
+    {
+        self::start();
+        unset($_SESSION[$key]);
+    }
+
+    /**
+     * Verifica si el usuario está autenticado
+     */
+    public static function isAuthenticated()
+    {
+        self::start();
+        return isset($_SESSION['user_id']);
+    }
+
+    /**
+     * Obtiene el ID del usuario autenticado
+     */
+    public static function userId()
+    {
+        self::start();
+        return $_SESSION['user_id'] ?? null;
+    }
+
+    /**
+     * Obtiene el usuario autenticado
+     */
+    public static function user()
+    {
+        self::start();
+        return $_SESSION['user'] ?? null;
+    }
+
+    /**
+     * Inicia sesión de usuario
+     */
+    public static function login($user)
+    {
+        self::start();
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user'] = $user;
+    }
+
+    /**
+     * Cierra sesión de usuario
+     */
+    public static function logout()
+    {
+        self::start();
+        unset($_SESSION['user_id']);
+        unset($_SESSION['user']);
+    }
 }

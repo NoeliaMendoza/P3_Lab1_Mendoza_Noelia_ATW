@@ -10,7 +10,7 @@ class Validator
 
     public function __construct($data, $rules)
     {
-        $this->data  = $data;
+        $this->data = $data;
         $this->rules = $rules;
     }
 
@@ -23,18 +23,11 @@ class Validator
     }
 
     /**
-     * Ejecuta la validación
+     * Ejecuta la validación y redirige si falla
      */
     public function validate()
     {
-        foreach ($this->rules as $field => $rulesString) {
-            $rules = explode('|', $rulesString);
-            $value = $this->data[$field] ?? null;
-
-            foreach ($rules as $rule) {
-                $this->applyRule($field, $value, $rule);
-            }
-        }
+        $this->runValidation();
 
         if (!empty($this->errors)) {
             SessionManager::flashErrors($this->errors);
@@ -50,13 +43,28 @@ class Validator
     }
 
     /**
+     * Ejecuta la validación sin redirigir
+     */
+    public function runValidation()
+    {
+        foreach ($this->rules as $field => $rulesString) {
+            $rules = explode('|', $rulesString);
+            $value = $this->data[$field] ?? null;
+
+            foreach ($rules as $rule) {
+                $this->applyRule($field, $value, $rule);
+            }
+        }
+    }
+
+    /**
      * Aplica una regla de validación
      */
     protected function applyRule($field, $value, $rule)
     {
         // Parsear la regla (ej: "min:3" => rule: "min", parameter: "3")
-        $parts     = explode(':', $rule);
-        $ruleName  = $parts[0];
+        $parts = explode(':', $rule);
+        $ruleName = $parts[0];
         $parameter = $parts[1] ?? null;
 
         switch ($ruleName) {
@@ -95,6 +103,24 @@ class Validator
                     $this->errors[$field][] = "El campo " . $this->getFieldName($field) . " debe ser una URL válida.";
                 }
                 break;
+
+            case 'unique':
+                // Formato: unique:tabla,columna
+                $params = explode(',', $parameter);
+                $table = $params[0] ?? '';
+                $column = $params[1] ?? $field;
+
+                if ($table && $column) {
+                    $existing = db()->query(
+                        "SELECT id FROM {$table} WHERE {$column} = :value",
+                        ['value' => $value]
+                    )->first();
+
+                    if ($existing) {
+                        $this->errors[$field][] = "Este " . $this->getFieldName($field) . " ya está registrado.";
+                    }
+                }
+                break;
         }
     }
 
@@ -111,6 +137,9 @@ class Validator
             'title' => 'título',
             'url' => 'URL',
             'id' => 'ID',
+            'username' => 'usuario',
+            'password' => 'contraseña',
+            'email' => 'email',
         ];
 
         return $names[$field] ?? $field;
@@ -130,5 +159,13 @@ class Validator
     public function fails()
     {
         return !empty($this->errors);
+    }
+
+    /**
+     * Verifica si la validación pasó
+     */
+    public function passes()
+    {
+        return empty($this->errors);
     }
 }
